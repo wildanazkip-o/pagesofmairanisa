@@ -51,10 +51,25 @@ h2{ margin:6px 0 0; font-weight:normal; font-size:1.25rem; color:var(--gold); te
 .qcard.shake{ animation:shake .45s; }
 @keyframes shake{ 0%,100%{ transform:rotate(-.8deg); } 20%{ transform:rotate(-.8deg) translateX(-9px); } 40%{ transform:rotate(-.8deg) translateX(8px); } 60%{ transform:rotate(-.8deg) translateX(-6px); } 80%{ transform:rotate(-.8deg) translateX(4px); } }
 .result{ width:100%; max-width:340px; display:flex; flex-direction:column; align-items:center; gap:14px; padding:22px 18px; border-radius:18px; border:2px dashed #d49245; background:rgba(25,18,12,.7); text-align:center; }
-.result p{ margin:0; font-size:1.4rem; line-height:1.35; color:#fff1cf; }
+.result p{ margin:0; white-space:pre-line; font-size:1.4rem; line-height:1.35; color:#fff1cf; }
 .result .btn{ text-decoration:none; }
 .reset{ background:none; border:0; color:rgba(217,167,126,.65); font-size:.85rem; cursor:pointer; padding:8px; text-decoration:underline; }
 .bottom-nav a[aria-disabled="true"]{ opacity:.35; }
+
+.rate{ display:flex; flex-direction:column; gap:12px; }
+.rate-label{ margin:0; font-size:1.05rem; color:#8c512a; }
+.stars{ display:flex; justify-content:space-between; gap:4px; }
+.star{ flex:1; min-height:52px; padding:4px; border:0; border-radius:12px; background:rgba(255,255,255,.5); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .15s,background .2s; }
+.star:hover{ transform:scale(1.08); background:rgba(255,255,255,.85); }
+.star svg{ width:34px; height:34px; fill:none; stroke:#8c512a; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:fill .2s; }
+.star.on svg{ fill:#e8a13a; }
+.nums{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.num{ min-height:46px; border-radius:12px; border:2px dashed rgba(140,81,42,.55); background:rgba(255,255,255,.5); color:#4a2c12; font-size:1.25rem; cursor:pointer; transition:background .2s,transform .15s; }
+.num:hover{ background:rgba(255,255,255,.85); transform:translateY(-2px); }
+.num.on{ border-style:solid; border-color:#8c512a; background:#d49245; }
+.star:focus-visible,.num:focus-visible{ outline:2px solid #8c512a; outline-offset:2px; }
+.rate .btn{ align-self:center; margin-top:2px; }
+.rate .btn:disabled{ opacity:.4; cursor:not-allowed; }
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
 <filter id="rough" x="-15%" y="-15%" width="130%" height="130%"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.6"/></filter>
@@ -107,7 +122,8 @@ var CONFIG = {
     {q:"Tanggal First date ?",  o:["12 Juli 2026","13 Juli 2026","14 Juli 2026","11 Juli 2026"], a:0},
     {q:"Tempat First date ?",  o:["KRU Kranggan","Bura Bura","COSAN","BaraTugu"], a:0},
     {q:"Udah berapa bulan kita semenjak balikan ?",  o:["6 Bulan","7 Bulan","5 Bulan","4 Bulan"], a:0},
-    {q:"Tanggal ulang tahunku",  o:["15 Agustus 2009","16 Agustus 2009","15 Agustus 2008","14 Agustus 2009"], a:0}
+    {q:"Tanggal ulang tahunku",  o:["15 Agustus 2009","16 Agustus 2009","15 Agustus 2008","14 Agustus 2009"], a:0},
+    {q:"Rating website buatanku dong beb", rate:true}
   ],
   lulus: "anjayyyyyyyyyy bebb"
 };
@@ -115,9 +131,34 @@ var KEY="page14_pass", qs=CONFIG.qs, i=0, busy=false;
 var nx=document.querySelector('.bottom-nav a[aria-label="Halaman berikutnya"]');
 function lock(on){ nx.setAttribute("aria-disabled",on?"true":"false"); }
 nx.addEventListener("click",function(e){ if(nx.getAttribute("aria-disabled")==="true"){ e.preventDefault(); $("hint").textContent="selesain kuisnya dulu ya \u2661"; } });
+
+var RKEY="page14_rating";
+function ratingText(){ try{ var r=JSON.parse(localStorage.getItem(RKEY)||"null"); if(r) return "\n\nrating website: "+r.s+"/5 bintang \u2605 \u00b7 "+r.n+"/10"; }catch(e){} return ""; }
+function renderRate(q){
+  var st=0, nm=0, box=$("opts");
+  $("qt").textContent=q.q; box.innerHTML=""; $("hint").textContent="yang ini nggak ada salahnya kok, jujur aja ya \u2661";
+  var w=document.createElement("div"); w.className="rate"; box.appendChild(w);
+  var l1=document.createElement("p"); l1.className="rate-label"; l1.textContent="kasih bintang (1-5)"; w.appendChild(l1);
+  var sr=document.createElement("div"); sr.className="stars"; w.appendChild(sr);
+  var l2=document.createElement("p"); l2.className="rate-label"; l2.textContent="kasih nilai (1-10)"; w.appendChild(l2);
+  var nr=document.createElement("div"); nr.className="nums"; w.appendChild(nr);
+  var go=document.createElement("button"); go.type="button"; go.className="btn"; go.disabled=true; go.textContent="kirim rating"; w.appendChild(go);
+  var stars=[], nums=[];
+  function sync(){ stars.forEach(function(b,k){ b.classList.toggle("on",k<st); b.setAttribute("aria-pressed",k<st?"true":"false"); });
+    nums.forEach(function(b,k){ b.classList.toggle("on",k+1===nm); b.setAttribute("aria-pressed",k+1===nm?"true":"false"); });
+    go.disabled=!(st&&nm); }
+  for(var k=1;k<=5;k++){ (function(v){ var b=document.createElement("button"); b.type="button"; b.className="star"; b.setAttribute("aria-label",v+" bintang");
+    b.innerHTML='<svg viewBox="0 0 48 48" aria-hidden="true"><use href="#d-star"/></svg>'; b.addEventListener("click",function(){ st=v; sync(); }); sr.appendChild(b); stars.push(b); })(k); }
+  for(var n=1;n<=10;n++){ (function(v){ var b=document.createElement("button"); b.type="button"; b.className="num"; b.textContent=v; b.setAttribute("aria-label","nilai "+v);
+    b.addEventListener("click",function(){ nm=v; sync(); }); nr.appendChild(b); nums.push(b); })(n); }
+  go.addEventListener("click",function(){ if(busy||!(st&&nm)) return; busy=true; go.disabled=true;
+    try{ localStorage.setItem(RKEY,JSON.stringify({s:st,n:nm})); }catch(e){}
+    confetti(16); $("hint").textContent="makasih beb! \u2661";
+    setTimeout(function(){ busy=false; i++; if(i>=qs.length) done(true); else render(); },900); });
+}
 function render(){
   $("pn").textContent="soal "+(i+1)+" dari "+qs.length; $("pbar").style.width=(i/qs.length*100)+"%";
-  var q=qs[i], order=q.o.map(function(_,k){ return k; });
+  var q=qs[i]; if(q.rate){ renderRate(q); return; } var order=q.o.map(function(_,k){ return k; });
   for(var j=order.length-1;j>0;j--){ var r=Math.floor(Math.random()*(j+1)), t=order[j]; order[j]=order[r]; order[r]=t; }
   $("qt").textContent=q.q; $("opts").innerHTML="";
   order.forEach(function(k){
@@ -129,7 +170,7 @@ function pick(b,ok){
     setTimeout(function(){ busy=false; i++; if(i>=qs.length) done(true); else { $("hint").textContent="lanjut ya"; render(); } },900); }
   else { b.classList.add("wrong"); b.disabled=true; var c=$("qcard"); c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); $("hint").textContent="hampir! coba lagi ya"; } }
 function done(fresh){
-  $("qcard").hidden=true; $("pbar").style.width="100%"; $("pn").textContent="selesai"; $("result").hidden=false; $("reset").hidden=false; $("rmsg").textContent=CONFIG.lulus; $("hint").textContent="";
+  $("qcard").hidden=true; $("pbar").style.width="100%"; $("pn").textContent="selesai"; $("result").hidden=false; $("reset").hidden=false; $("rmsg").textContent=CONFIG.lulus+ratingText(); $("hint").textContent="";
   try{ localStorage.setItem(KEY,"1"); }catch(e){} lock(false); if(fresh) confetti(70); }
 $("reset").addEventListener("click",function(){ try{ localStorage.removeItem(KEY); }catch(e){} i=0; $("result").hidden=true; $("reset").hidden=true; $("qcard").hidden=false; lock(true); $("hint").textContent="jawab dengan benar semuanya ya, baru boleh lanjut"; render(); });
 var passed=false; try{ passed=localStorage.getItem(KEY)==="1"; }catch(e){}
